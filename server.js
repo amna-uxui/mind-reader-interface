@@ -27,26 +27,20 @@ function calculateDominance(roomCode) {
   if (!room) return;
 
   const participants = Object.values(room.participants);
-  const MIN_TOTAL_SECONDS = 120;
+
+  const MIN_TOTAL_SECONDS = 10;
   const MIN_PARTICIPANTS = 3;
-  const totalSpeakingSeconds = participants.reduce(
-    (sum, participant) => sum + participant.speakingSeconds,
-    0
-  );
+
+  const total = participants.reduce((sum, p) => sum + p.speakingSeconds, 0);
 
   const dominanceEnabled =
-  participants.length >= MIN_PARTICIPANTS &&
-  total >= MIN_TOTAL_SECONDS;
+    participants.length >= MIN_PARTICIPANTS &&
+    total >= MIN_TOTAL_SECONDS;
 
-  participants.forEach((participant) => {
-    participant.percentage =
-      totalSpeakingSeconds > 0
-        ? Math.round((participant.speakingSeconds / totalSpeakingSeconds) * 100)
-        : 0;
+  participants.forEach((p) => {
+    p.percentage = total > 0 ? Math.round((p.speakingSeconds / total) * 100) : 0;
 
     let level = 0;
-
-   let level = 0;
 
     if (dominanceEnabled) {
       if (p.percentage >= 90) level = 4;
@@ -55,19 +49,15 @@ function calculateDominance(roomCode) {
       else if (p.percentage >= 60) level = 1;
     }
 
-    participant.reactionLevel = level;
+    p.reactionLevel = level;
   });
 
-  // Send full dashboard state to host only.
-  if (room.hostSocketId) {
-    io.to(room.hostSocketId).emit("dashboard-update", participants);
-  }
+  io.to(room.hostSocketId).emit("dashboard-update", participants);
 
-  // Send private reaction only to the relevant participant phone.
-  participants.forEach((participant) => {
-    io.to(participant.socketId).emit("reaction", {
-      level: participant.reactionLevel,
-      percentage: participant.percentage
+  participants.forEach((p) => {
+    io.to(p.socketId).emit("reaction", {
+      level: p.reactionLevel,
+      percentage: p.percentage
     });
   });
 }
